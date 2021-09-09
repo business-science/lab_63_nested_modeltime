@@ -3,6 +3,11 @@
 # ITERATION, PARALLEL PROCESSING & ERROR HANDLING ----
 # **** ----
 
+# PLEASE USE DEVELOPMENT VERSION OF MODELTIME:
+# - This will install the new features until released to CRAN in a couple weeks
+# - Dependencies TRUE will also install the THIEF algorithm
+remotes::install_github("business-science/modeltime", dependencies = TRUE)
+
 # LIBRARIES & DATA ----
 
 library(modeltime)
@@ -13,7 +18,7 @@ library(timetk)
 sales_raw_tbl <- read_rds("data/walmart_item_sales.rds")
 
 sample_12_tbl <- sales_raw_tbl %>%
-    filter(as.numeric(item_id) %in% 91:102)
+    filter(as.numeric(item_id) %in% 1:12)
 
 sample_12_tbl %>%
     group_by(item_id) %>%
@@ -23,13 +28,21 @@ sample_12_tbl %>%
 
 nested_data_tbl <- sales_raw_tbl %>%
     group_by(item_id) %>%
-    extend_timeseries(.id_var = item_id, .date_var = date, .length_future = 90) %>%
-    nest_timeseries(.id_var = item_id, .length_future = 90) %>%
-    split_nested_timeseries(.length_test = 90)
+    extend_timeseries(
+        .id_var = item_id,
+        .date_var = date,
+        .length_future = 90
+    ) %>%
+    nest_timeseries(
+        .id_var = item_id,
+        .length_future = 90
+    ) %>%
+    split_nested_timeseries(
+        .length_test = 90
+    )
 
 nested_data_tbl %>% tail()
 
-# nested_data_tbl %>% write_rds("data/nested_data_tbl.rds")
 
 # MODELING ----
 
@@ -40,6 +53,8 @@ rec_xgb <- recipe(value ~ ., extract_nested_train_split(nested_data_tbl)) %>%
     step_rm(date) %>%
     step_zv(all_predictors()) %>%
     step_dummy(all_nominal_predictors(), one_hot = TRUE)
+
+bake(prep(rec_xgb), extract_nested_train_split(nested_data_tbl))
 
 # * XGBoost Models ----
 
@@ -89,6 +104,7 @@ try_sample_tbl %>% extract_nested_error_report()
 parallel_start(6)
 
 nested_modeltime_tbl <- nested_data_tbl %>%
+    # slice_tail(n = 6) %>%
     modeltime_nested_fit(
 
         model_list = list(
@@ -105,7 +121,9 @@ nested_modeltime_tbl <- nested_data_tbl %>%
 
 nested_modeltime_tbl
 
-nested_modeltime_tbl %>% write_rds("artifacts/nested_modeltime_tbl.rds")
+# FILES REMOVED: Too large
+# nested_modeltime_tbl %>% write_rds("artifacts/nested_modeltime_tbl.rds")
+# nested_modeltime_tbl <- read_rds("artifacts/nested_modeltime_tbl.rds")
 
 # * Review Any Errors ----
 nested_modeltime_tbl %>% extract_nested_error_report()
@@ -136,7 +154,7 @@ nested_modeltime_subset_tbl <- nested_modeltime_tbl %>%
 # 3.0 SELECT BEST ----
 
 nested_best_tbl <- nested_modeltime_subset_tbl %>%
-    modeltime_nested_select_best()
+    modeltime_nested_select_best(metric = "rmse")
 
 # * Visualize Best Models ----
 nested_best_tbl %>%
@@ -147,6 +165,7 @@ nested_best_tbl %>%
 
 
 # 4.0 REFIT ----
+#  - Long Running Script: 25 sec
 
 nested_best_refit_tbl <- nested_best_tbl %>%
     modeltime_nested_refit(
@@ -155,6 +174,10 @@ nested_best_refit_tbl <- nested_best_tbl %>%
             allow_par = TRUE
         )
     )
+
+# FILES REMOVED: Too large
+# nested_best_refit_tbl %>% write_rds("artifacts/nested_best_refit_tbl.rds")
+# nested_best_refit_tbl <- read_rds("artifacts/nested_best_refit_tbl.rds")
 
 # * Review Any Errors ----
 nested_best_refit_tbl %>% extract_nested_error_report()
@@ -204,16 +227,22 @@ nested_best_refit_small_ts_tbl %>%
 nested_best_refit_all_tbl <- nested_best_refit_tbl %>%
     bind_rows(nested_best_refit_small_ts_tbl)
 
-# BONUS 1: NEW WORKFLOW ----
-#   - FORECAST FROM NESTED MODELTIME TABLE ----
+nested_best_refit_all_tbl %>% write_rds("artifacts/best_models_tbl.rds")
 
+# BONUS 2: NEW WORKFLOW ----
+#   - New Function: modeltime_nested_forecast()
+#   - Used to make changes to your future forecast
+
+parallel_stop()
+
+parallel_start(6)
 new_forecast_tbl <- nested_best_refit_all_tbl %>%
     modeltime_nested_forecast(
         h = 365,
         conf_interval = 0.99,
         control = control_nested_forecast(
             verbose   = TRUE,
-            allow_par = TRUE
+            allow_par = FALSE
         )
     )
 
@@ -222,5 +251,5 @@ new_forecast_tbl %>%
     group_by(item_id) %>%
     plot_modeltime_forecast(.facet_ncol = 3)
 
-# BONUS 2:
+# BONUS 3: SHINY APP ----
 
