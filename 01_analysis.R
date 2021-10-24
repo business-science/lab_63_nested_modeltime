@@ -95,8 +95,16 @@ try_sample_tbl %>% extract_nested_error_report()
 # 2.0 SCALE ----
 #  - LONG RUNNING SCRIPT (2-4 MIN)
 
-parallel_start(6)
+# Option 1 - Local CPUs
+# parallel_start(6)
 
+# Option 2 - Local Spark Session
+library(sparklyr)
+# sparklyr::spark_install()
+sc <- spark_connect(master = "local[12]")
+parallel_start(sc, .method = "spark")
+
+# Takes about 2.4 min on 12-core laptop with Spark
 nested_modeltime_tbl <- nested_data_tbl %>%
     # slice_tail(n = 6) %>%
     modeltime_nested_fit(
