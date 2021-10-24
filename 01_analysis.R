@@ -1,12 +1,6 @@
 # BUSINESS SCIENCE UNIVERSITY ----
 # LEARNING LAB 63: MODELTIME NESTED FORECASTING ----
-# ITERATION, PARALLEL PROCESSING & ERROR HANDLING ----
 # **** ----
-
-# PLEASE USE DEVELOPMENT VERSION OF MODELTIME:
-# - This will install the new features until released to CRAN in a couple weeks
-# - Dependencies TRUE will also install the THIEF algorithm
-remotes::install_github("business-science/modeltime", dependencies = TRUE)
 
 # LIBRARIES & DATA ----
 
@@ -252,4 +246,20 @@ new_forecast_tbl %>%
     plot_modeltime_forecast(.facet_ncol = 3)
 
 # BONUS 3: SHINY APP ----
+
+# CONCLUSIONS ----
+
+# 1. Time Series - Pretty important for businesses.
+#    We can save millions by improving their forecasting.
+#    Modeltime can help. Need to learn it.
+
+# 2. Production - Not just making models, but providing businesses
+#    applications they can use. Shiny is extremely powerful.
+#    Unlike Tableau and PowerBI, can run analysis through R on the fly.
+#    Need to learn it.
+
+
+
+
+
 
