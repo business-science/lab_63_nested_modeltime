@@ -5,7 +5,7 @@ output:
         orientation: rows
         theme:
             bg: "#FFFFFF"
-            fg: "#2c3e50"
+            fg: "black"
             primary: "#18bc9c"
             base_font: !expr bslib::font_google("Oswald")
 runtime: shiny
@@ -158,6 +158,8 @@ observeEvent(input$apply, {
 
 ```{r}
 output$plotly_1 <- renderPlotly({
+  
+    req(rv$forecast_tbl)
     
     facet_col <- 1
     
@@ -170,7 +172,7 @@ output$plotly_1 <- renderPlotly({
         plot_modeltime_forecast(
             .facet_ncol = facet_col, 
             .legend_max_width = 26, 
-            .plotly_slider = TRUE
+            .plotly_slider = FALSE
         )
 })
 
@@ -182,6 +184,8 @@ plotlyOutput(outputId = "plotly_1")
 
 ```{r}
 output$plotly_2 <- renderPlotly({
+  
+    req(rv$forecast_tbl)
     
     facet_col <- 1
     
@@ -195,7 +199,7 @@ output$plotly_2 <- renderPlotly({
         plot_modeltime_forecast(
             .facet_ncol = facet_col, 
             .legend_max_width = 26, 
-            .plotly_slider = TRUE
+            .plotly_slider = FALSE
         )
 })
 

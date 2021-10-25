@@ -2,6 +2,9 @@
 # LEARNING LAB 63: MODELTIME NESTED FORECASTING ----
 # **** ----
 
+# PRESENTATION MATERIALS:
+# https://github.com/business-science/lab_63_nested_modeltime
+
 # LIBRARIES & DATA ----
 
 library(modeltime)
