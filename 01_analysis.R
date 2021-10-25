@@ -25,11 +25,15 @@ sample_12_tbl %>%
 
 nested_data_tbl <- sales_raw_tbl %>%
     group_by(item_id) %>%
+
     extend_timeseries(
         .id_var = item_id,
         .date_var = date,
         .length_future = 90
     ) %>%
+
+    # ADD EXTERNAL REGRESSOR HERE <<--
+
     nest_timeseries(
         .id_var = item_id,
         .length_future = 90
@@ -51,7 +55,7 @@ rec_xgb <- recipe(value ~ ., extract_nested_train_split(nested_data_tbl)) %>%
     step_zv(all_predictors()) %>%
     step_dummy(all_nominal_predictors(), one_hot = TRUE)
 
-bake(prep(rec_xgb), extract_nested_train_split(nested_data_tbl))
+bake(prep(rec_xgb), extract_nested_train_split(nested_data_tbl)) %>% glimpse()
 
 # * XGBoost Models ----
 
@@ -102,6 +106,7 @@ try_sample_tbl %>% extract_nested_error_report()
 # parallel_start(6)
 
 # Option 2 - Local Spark Session
+
 library(sparklyr)
 # sparklyr::spark_install()
 sc <- spark_connect(master = "local[12]")
@@ -171,6 +176,10 @@ nested_best_tbl %>%
 
 # 4.0 REFIT ----
 #  - Long Running Script: 25 sec
+
+parallel_stop()
+
+parallel_start(12)
 
 nested_best_refit_tbl <- nested_best_tbl %>%
     modeltime_nested_refit(
@@ -247,7 +256,7 @@ new_forecast_tbl <- nested_best_refit_all_tbl %>%
         conf_interval = 0.99,
         control = control_nested_forecast(
             verbose   = TRUE,
-            allow_par = FALSE
+            allow_par = TRUE
         )
     )
 
@@ -271,6 +280,30 @@ new_forecast_tbl %>%
 
 
 
+# FEATURE IMPORTANCE ----
 
+fit_xgboost <- nested_modeltime_tbl %>%
+    slice(1) %>%
+    extract_nested_modeltime_table() %>%
+    pluck(".model", 2)
+
+library(xgboost)
+
+fit_xgboost$fit$fit$fit %>% class()
+
+xgboost::xgb.importance(model = fit_xgboost$fit$fit$fit) %>%
+    as_tibble() %>%
+    mutate(Feature = as_factor(Feature) %>% fct_reorder(Gain)) %>%
+    ggplot(aes(x = Gain, y = Feature)) +
+    geom_point()
+
+
+# COURSE DISCOUNTS ----
+
+# 5-Course R-Track $300 OFF
+# https://university.business-science.io/p/5-course-bundle-machine-learning-web-apps-time-series/?coupon_code=LEARNINGLABS
+#
+# Time Series Course 15% OFF
+# https://university.business-science.io/p/ds4b-203-r-high-performance-time-series-forecasting/?coupon_code=LEARNINGLABS
 
 
